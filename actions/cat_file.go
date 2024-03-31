@@ -9,6 +9,10 @@ import (
 	"log"
 	"os"
 	"path"
+	"strconv"
+	"strings"
+
+	"github.com/kamontat/gogit/git"
 )
 
 func NewCatFile() *CatFile {
@@ -30,14 +34,14 @@ func (a *CatFile) Setup(fs *flag.FlagSet) {
 }
 
 func (a *CatFile) Exec(args []string) error {
-	var blob = args[0]
-	log.Printf("input blob is '%s' with pretty=%t\n", blob, a.pretty)
+	var hash = args[0]
+	log.Printf("input hash is '%s' with pretty=%t\n", blob, a.pretty)
 
-	var blobFolder = blob[:2]
-	var blobFile = blob[2:]
+	var blobFolder = hash[:2]
+	var blobFile = hash[2:]
 
 	var blobPath = path.Join(".git", "objects", blobFolder, blobFile)
-	log.Printf("looking blob at %s", blobPath)
+	log.Printf("looking blob at '%s'", blobPath)
 
 	var blobBuffer, err = os.Open(blobPath)
 	if err != nil {
@@ -50,13 +54,28 @@ func (a *CatFile) Exec(args []string) error {
 	}
 	defer src.Close()
 
-	var content bytes.Buffer
-	_, err = io.Copy(&content, src)
+	raw, err := io.ReadAll(src)
 	if err != nil {
 		return fmt.Errorf("copy blob object '%s'", err)
 	}
 
-	fmt.Printf("%s", content.String())
+	var indexContent = bytes.IndexByte(raw, 0)
+	if indexContent == -1 {
+		return fmt.Errorf("corrupted file at %s", blobPath)
+	}
 
-	return nil
+	var metadata = strings.Split(string(raw[:indexContent]), " ")
+	size, err := strconv.Atoi(metadata[1])
+	if err != nil {
+		return fmt.Errorf("convert content size %s", err)
+	}
+
+	myObject := git.GitObject{
+		Hash:    hash,
+		Type:    metadata[0],
+		Size:    size,
+		Content: raw[indexContent+1:],
+	}
+
+	fmt.Print(string(myObject.Content))
 }
