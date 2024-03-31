@@ -35,7 +35,7 @@ func (a *CatFile) Setup(fs *flag.FlagSet) {
 
 func (a *CatFile) Exec(args []string) error {
 	var hash = args[0]
-	log.Printf("input hash is '%s' with pretty=%t\n", blob, a.pretty)
+	log.Printf("input hash is '%s' with pretty=%t\n", hash, a.pretty)
 
 	var blobFolder = hash[:2]
 	var blobFile = hash[2:]
@@ -78,4 +78,5 @@ func (a *CatFile) Exec(args []string) error {
 	}
 
 	fmt.Print(string(myObject.Content))
+	return nil
 }
